@@ -67,7 +67,7 @@ def main():
         print("RESULT=ALREADY_NORMAL_LOUDNESS; investigate player/alternate URL", flush=True)
         return
 
-    args = [
+    encoding_args = [
         "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
         "-i", str(TRACK), "-vn",
         "-af",
@@ -82,7 +82,7 @@ def main():
     ]
     with tempfile.TemporaryDirectory(prefix="musicbox-normalize-") as d:
         candidate = Path(d) / "track-245-normalized.mp3"
-        command(*(args + [str(candidate)]))
+        command(*(encoding_args + [str(candidate)]))
         after_seconds = validate_file(candidate)
         after = measure(candidate)
         print("NORMALIZED_LUFS=" + str(after["input_i"]), flush=True)
