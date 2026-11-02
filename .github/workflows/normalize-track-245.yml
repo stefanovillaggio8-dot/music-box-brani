@@ -1,0 +1,64 @@
+name: Normalizza volume - Mentre tutto scorre
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/normalize-track-245.py'
+      - '.github/workflows/normalize-track-245.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/normalize-track-245.py'
+      - '.github/workflows/normalize-track-245.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: musicbox-normalize-track-245
+  cancel-in-progress: false
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout solo il brano da correggere, non tutta la libreria
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          filter: blob:none
+          sparse-checkout: |
+            songs/track-245.mp3
+            tools/normalize-track-245.py
+          sparse-checkout-cone-mode: false
+
+      - name: Verifica FFmpeg e analizzatore
+        run: |
+          python3 -m py_compile tools/normalize-track-245.py
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Misura LUFS e true peak, prova la normalizzazione senza modificare
+        run: python3 tools/normalize-track-245.py
+
+      - name: Normalizza e verifica in due passaggi solo sull'archivio principale
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: python3 tools/normalize-track-245.py --write
+
+      - name: Pubblica esclusivamente track-245.mp3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          if git diff --quiet -- songs/track-245.mp3; then
+            echo "Nessuna modifica: il brano aveva già volume normale"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- songs/track-245.mp3
+          git commit -m 'Audio: normalizza Mentre Tutto Score a -14 LUFS, senza clipping'
+          git pull --rebase origin main
+          git push origin HEAD:main
