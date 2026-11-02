@@ -35,9 +35,16 @@ jobs:
             tools/normalize-track-245.py
           sparse-checkout-cone-mode: false
 
+      - name: Installa FFmpeg sul runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+
       - name: Verifica FFmpeg e analizzatore
         run: |
           python3 -m py_compile tools/normalize-track-245.py
+          command -v ffmpeg
+          command -v ffprobe
           ffmpeg -version | head -n 1
           ffprobe -version | head -n 1
 
